@@ -30,3 +30,5 @@ for the audio tools library, version 0.9.6 is required.
 in arduino-audio-tools library : git checkout tags/v0.9.6
 
 now can start the record_and_stream.ino sketch
+
+train model with : https://mltools.arduino.cc
