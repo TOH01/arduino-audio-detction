@@ -33,9 +33,9 @@ flash_windows.bat
 
 ## Edge Impulse Firmware for Arduino Nicla Voice
 
-1. Use the tools in /firmware-arduino-nicla-voice
+1. Use the tools in /firmware
 
-2. To easily flash the firmware needed to interact with the NDP, run script for your os, e.g. ./arduino-win-build.bat --al
+2. To easily flash the firmware needed to interact with the NDP, run script for your os, e.g. ./arduino-win-build.bat --all
 
 ## Demo
 
