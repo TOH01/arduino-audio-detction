@@ -1,6 +1,8 @@
 # Arduino Audio Detection
 
 This guide covers training a model using [Arduino ML Tools](https://mltools.arduino.cc) and deploying it to an Arduino device.
+On ML Tools website, a model can easily be trained. For settings, follow to screenshots in /edge_impuls
+When done you will receive a folder with Syntiant firmware. To Deploy it on the Nicla Voice follow the next steps.
 
 ## Prerequisites
 
@@ -15,8 +17,7 @@ pip install pyserial
 
 ## Arduino Firmware
 
-1. Download the Arduino firmware for your board (or use the ZIP from the repo):
-   [Arduino Nicla Voice Firmware Documentation](https://docs.edgeimpulse.com/hardware/boards/arduino-nicla-voice)
+1. Using the tools from /on_off_project install the NDP120 firmware (Created by training a model on Edge Impulse)
 
 2. Install the firmware using the flash script for your OS, e.g.:
 
@@ -32,17 +33,23 @@ flash_windows.bat
 
 ## Edge Impulse Firmware for Arduino Nicla Voice
 
-1. Clone or download the repository:
-   [edgeimpulse/firmware-arduino-nicla-voice](https://github.com/edgeimpulse/firmware-arduino-nicla-voice)
+1. Use the tools in /firmware-arduino-nicla-voice
 
-2. Follow the instructions in `README.md` to both **build** and **flash** the firmware.
+2. To easily flash the firmware needed to interact with the NDP, run script for your os, e.g. ./arduino-win-build.bat --al
 
 ## Demo
 
 1. Open the Arduino IDE.
-2. Run the demo model.
+2. Open serial monitor for the right port, set baud to 115200 and Both NL + CR
+3. If everything worked correct, you can now interact with the NPD. Send "AT+HELP" to view list of commands
 
-* The model should now recognize the keywords **go** and **stop**
+* The model should now recognize the keywords **on**, **off** and occasionally **noise**
 
 ## Data
+
+The Data being used to train a model on ML Tools, is an open Dataset by Google.
+Folders for keywords "on" and "off" were used. Both containt around 3750 .wav files.
+For the noise classifier, the background_noise folder was used. Can just import those folder to
+Edge Impulse Website, it will handle them.
+
 https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz
