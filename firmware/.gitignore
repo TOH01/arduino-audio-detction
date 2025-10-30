@@ -1,0 +1,10 @@
+# Build files
+firmware**.bin
+firmware*.hex
+firmware**.elf
+*.map
+
+# OS files
+.DS_Store
+
+.vscode/
