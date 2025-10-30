@@ -42,4 +42,7 @@ flash_windows.bat
 1. Open the Arduino IDE.
 2. Run the demo model.
 
-* The model should now recognize the keywords **go** and **stop**.
+* The model should now recognize the keywords **go** and **stop**
+
+## Data
+https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz
