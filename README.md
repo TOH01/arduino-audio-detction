@@ -49,6 +49,8 @@ flash_windows.bat
 
 The Data being used to train a model on ML Tools, is an open Dataset by Google.
 Folders for keywords "on" and "off" were used. Both containt around 3750 .wav files.
+
+https://www.tensorflow.org/tutorials/audio/simple_audio
 For the noise classifier, the background_noise folder was used. Can just import those folder to
 Edge Impulse Website, it will handle them.
 
