@@ -56,3 +56,4 @@ Edge Impulse Website, it will handle them.
 https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz
 
 https://www.tensorflow.org/tutorials/audio/simple_audio
+https://users.ece.utexas.edu/~bevans/courses/rtdsp/lectures/10_Data_Conversion/AP_Understanding_PDM_Digital_Audio.pdf
