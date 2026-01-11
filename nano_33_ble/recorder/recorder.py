@@ -43,7 +43,7 @@ CHANNELS = 1
 SAMPLE_WIDTH = 2  # 16-bit
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 16000
-RECORD_DURATION = 2  # seconds
+RECORD_DURATION = 1  # seconds
 
 # Noise gate and amplification
 NOISE_GATE_THRESHOLD = 300

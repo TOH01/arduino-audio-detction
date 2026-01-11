@@ -1,0 +1,4 @@
+src/data_gather/libraries
+src/venv
+__pycache__/
+libraries
