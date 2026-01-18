@@ -10,17 +10,20 @@
         {
             "name": "noise",
             "label": 0,
-            "data_path": "recorder/recordings/stop"
+            "data_path": "recorder/recordings/noise",
+            "validation_data_path": "recorder/recordings/noise_val"
         },
         {
             "name": "go",
             "label": 1,
-            "data_path": "recorder/recordings/go"
+            "data_path": "recorder/recordings/go",
+            "validation_data_path": "recorder/recordings/go_val"
         },
         {
             "name": "stop",
             "label": 2,
-            "data_path": "recorder/recordings/stop"
+            "data_path": "recorder/recordings/stop",
+            "validation_data_path": "recorder/recordings/stop_val"
         }
     ]
 }

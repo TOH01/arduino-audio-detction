@@ -4,8 +4,8 @@ import os
 import json
 import argparse
 from sklearn.model_selection import train_test_split
-from src.data_processing import load_dataset_from_config, SAMPLE_RATE, N_MFCC, N_FFT, HOP_LENGTH, DURATION
-from src.model import train_model
+from data_processing import load_dataset_from_config, SAMPLE_RATE, N_MFCC, N_FFT, HOP_LENGTH, DURATION
+from model import train_model
 
 def sanitize_c_string(s):
     return s.replace('\\', '\\\\').replace('"', '\\"')
