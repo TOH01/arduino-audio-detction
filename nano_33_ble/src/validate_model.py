@@ -8,6 +8,7 @@ import csv
 import numpy as np
 import tensorflow as tf
 import argparse
+import librosa
 from data_processing import extract_features, SAMPLE_RATE, DURATION, N_MFCC
 
 
@@ -96,8 +97,21 @@ def main():
         total = 0
 
         for wav_path in wav_files:
-            # Extract MFCC features (same as training)
-            mfcc = extract_features(wav_path, expected_samples)
+            try:
+                # Load audio
+                audio, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
+                
+                # Pad/Crop to exact length
+                if len(audio) < expected_samples:
+                    audio = np.pad(audio, (0, expected_samples - len(audio)))
+                else:
+                    audio = audio[:expected_samples]
+
+                # Extract MFCC features (same as training)
+                mfcc = extract_features(audio)
+            except Exception as e:
+                print(f"Error processing {wav_path}: {e}")
+                continue
             if mfcc is None:
                 continue
 

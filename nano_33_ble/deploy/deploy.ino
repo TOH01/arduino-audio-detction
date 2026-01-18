@@ -21,7 +21,7 @@
 // CONFIG
 // ==========================================
 // Software gain to match recorder.py (which uses GAIN = 1.5)
-#define GAIN_FACTOR 8.0f
+#define GAIN_FACTOR 1.5f
 
 // ==========================================
 // GLOBALS
