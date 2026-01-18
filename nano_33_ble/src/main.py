@@ -3,9 +3,11 @@ import numpy as np
 import os
 import json
 import argparse
+import shutil
 from sklearn.model_selection import train_test_split
 from data_processing import load_dataset_from_config, SAMPLE_RATE, N_MFCC, N_FFT, HOP_LENGTH, DURATION
 from model import train_model
+from mel_filterbank import generate_mel_filterbank_header
 
 def sanitize_c_string(s):
     return s.replace('\\', '\\\\').replace('"', '\\"')
@@ -15,7 +17,8 @@ def sanitize_c_string(s):
 # ------------------------------------------------------------------
 def generate_dsp_params_header(out_dir):
     """
-    Instead of Mean/Std, Audio needs FFT/MFCC parameters.
+    Audio FFT parameters for Arduino deployment.
+    Note: N_MFCC is now defined in mel_filterbank.h as N_MFCC_COEFFS.
     """
     file_path = os.path.join(out_dir, "dsp_params.h")
     
@@ -28,10 +31,10 @@ def generate_dsp_params_header(out_dir):
         f.write('#ifndef DSP_PARAMS_H\n#define DSP_PARAMS_H\n\n')
         f.write('// Audio Preprocessing Constants\n')
         f.write(f'#define SAMPLE_RATE {SAMPLE_RATE}\n')
-        f.write(f'#define N_MFCC {N_MFCC}       // The "Height" of the image\n')
         f.write(f'#define N_FFT {N_FFT}\n')
         f.write(f'#define HOP_LENGTH {HOP_LENGTH}\n')
         f.write(f'#define EXPECTED_FRAMES {expected_frames} // The "Width" of the image\n')
+        f.write('// Note: N_MFCC_COEFFS and N_MEL_FILTERS are defined in mel_filterbank.h\n')
         f.write('\n#endif // DSP_PARAMS_H\n')
 
 # ------------------------------------------------------------------
@@ -115,6 +118,31 @@ def create_full_model_from_config(config):
     # B. Model Config
     num_classes = len(set(y))
     generate_model_config_header(config, num_classes, model_name, out_dir)
+    
+    # C. Mel Filterbank (matches librosa exactly for Arduino deployment)
+    generate_mel_filterbank_header(
+        out_dir=out_dir,
+        sample_rate=SAMPLE_RATE,
+        n_fft=N_FFT,
+        n_mels=40,  # Standard librosa default
+        n_mfcc=N_MFCC
+    )
+    
+    # D. Copy all generated headers to deploy folder
+    deploy_dir = os.path.join(os.path.dirname(out_dir), "deploy")
+    if os.path.exists(deploy_dir):
+        headers_to_copy = [
+            f"{model_name}.h",
+            "dsp_params.h",
+            "model_config.h",
+            "mel_filterbank.h"
+        ]
+        for header in headers_to_copy:
+            src = os.path.join(out_dir, header)
+            dst = os.path.join(deploy_dir, header)
+            if os.path.exists(src):
+                shutil.copy2(src, dst)
+                print(f"  Copied {header} -> deploy/")
     
     print(f"Deployment files ready in {out_dir}/")
 
