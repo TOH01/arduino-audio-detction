@@ -1,98 +1,100 @@
 import serial
 import numpy as np
 import wave
-import struct
 import argparse
 import serial.tools.list_ports
 import os
 import datetime
 import uuid
+import threading
+import time
 
-# Default values
-DEFAULT_BAUD = 115200
-DEFAULT_LABEL = "audio"
+try:
+    import msvcrt
+    WINDOWS = True
+except ImportError:
+    import select
+    import sys
+    WINDOWS = False
 
-# Parse arguments
-parser = argparse.ArgumentParser(description="Serial Audio Data Collection")
-parser.add_argument('-p', '--port', dest='port', type=str, required=True, help="Serial port to connect to")
-parser.add_argument('-b', '--baud', dest='baud', type=int, default=DEFAULT_BAUD, help="Baud rate")
-parser.add_argument('-d', '--directory', dest='directory', type=str, default=".", help="Output directory for files")
-parser.add_argument('-l', '--label', dest='label', type=str, default=DEFAULT_LABEL, help="Label for files")
-args = parser.parse_args()
-
-port = args.port
-baud = args.baud
-out_dir = args.directory
-label = args.label
-
-# Print available serial ports
-print("\nAvailable serial ports:")
-for port_info, desc, hwid in sorted(serial.tools.list_ports.comports()):
-    print(f" {port_info} : {desc} [{hwid}]")
-
-print(f"\nConnecting to {port} at {baud} baud...")
-ser = serial.Serial(port, baud)
-if not ser.is_open:
-    ser.open()
-
-# Make output directory
-os.makedirs(out_dir, exist_ok=True)
-
-# Audio configuration
-CHANNELS = 1
-SAMPLE_WIDTH = 2  # 16-bit
+BAUD = 115200
 SAMPLE_RATE = 16000
-CHUNK_SIZE = 16000
-RECORD_DURATION = 1  # seconds
+DURATION = 1.0
+GAIN = 1.5
 
-# Noise gate and amplification
-NOISE_GATE_THRESHOLD = 300
-GAIN = 2.0  # amplify factor
+def get_key():
+    if WINDOWS:
+        if msvcrt.kbhit():
+            return msvcrt.getch().decode('utf-8', errors='ignore')
+    else:
+        dr, _, _ = select.select([sys.stdin], [], [], 0)
+        if dr:
+            return sys.stdin.read(1)
+    return None
 
-def amplify(data, gain):
-    return data * gain
+class Recorder:
+    def __init__(self, port, out_dir, label):
+        self.ser = serial.Serial(port, BAUD, timeout=0.1)
+        self.out_dir = out_dir
+        self.label = label
+        self.running = True
+        self.recording = False
+        self.buffer = []
+        self.samples_needed = int(SAMPLE_RATE * DURATION)
+        self.count = 0
+        os.makedirs(out_dir, exist_ok=True)
 
-def main():
-    buffer = []
+    def read_loop(self):
+        while self.running:
+            data = self.ser.read(1024)
+            if data:
+                samples = np.frombuffer(data, dtype=np.int16).copy()
+                samples = (samples * GAIN).clip(-32768, 32767).astype(np.int16)
+                if self.recording:
+                    self.buffer.extend(samples)
+                    if len(self.buffer) >= self.samples_needed:
+                        self.save()
+                        self.recording = False
 
-    print("Recording... Press Ctrl+C to stop.")
-    try:
-        while True:
-            # Read audio chunk from serial
-            data = ser.read(CHUNK_SIZE * SAMPLE_WIDTH)
-            if not data:
-                continue
+    def save(self):
+        samples = np.array(self.buffer[:self.samples_needed], dtype=np.int16)
+        ts = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        uid = str(uuid.uuid4())[-12:]
+        path = os.path.join(self.out_dir, f"{self.label}.{uid}.{ts}.wav")
+        with wave.open(path, "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(SAMPLE_RATE)
+            wf.writeframes(samples.tobytes())
+        print(f"Saved: {path}")
+        self.buffer = []
 
-            samples = np.frombuffer(data, dtype=np.int16).copy()
-
-            # Apply simple noise gate
-            samples[np.abs(samples) < NOISE_GATE_THRESHOLD] = 0
-
-            # Amplify
-            samples = amplify(samples, GAIN)
-
-            buffer.extend(samples.astype(np.int16))
-
-            # Save to WAV if enough samples collected
-            if len(buffer) >= SAMPLE_RATE * RECORD_DURATION * CHANNELS:
-                timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                uid = str(uuid.uuid4())[-12:]
-                filename = f"{label}.{uid}.{timestamp}.wav"
-                filepath = os.path.join(out_dir, filename)
-
-                buffer_array = np.array(buffer, dtype=np.int16)
-                with wave.open(filepath, "w") as wf:
-                    wf.setnchannels(CHANNELS)
-                    wf.setsampwidth(SAMPLE_WIDTH)
-                    wf.setframerate(SAMPLE_RATE)
-                    wf.writeframes(buffer_array.tobytes())
-
-                print(f"Saved: {filepath}")
-                buffer = []
-
-    except KeyboardInterrupt:
-        print("\nStopped recording.")
-        ser.close()
+    def run(self):
+        threading.Thread(target=self.read_loop, daemon=True).start()
+        print(f"Press SPACE to record '{self.label}', Q to quit")
+        try:
+            while self.running:
+                key = get_key()
+                if key == ' ' and not self.recording:
+                    self.count += 1
+                    print(f"Recording {self.count}...")
+                    time.sleep(0.15) # prevent keyboard noise
+                    self.ser.reset_input_buffer()
+                    self.buffer = []
+                    self.recording = True
+                elif key in ('q', 'Q'):
+                    self.running = False
+                time.sleep(0.01)
+        except KeyboardInterrupt:
+            pass
+        self.ser.close()
+        print(f"Done. Recorded {self.count} samples.")
 
 if __name__ == "__main__":
-    main()
+    print("Ports:", [p.device for p in serial.tools.list_ports.comports()])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', required=True)
+    parser.add_argument('-d', '--directory', default="recordings")
+    parser.add_argument('-l', '--label', default="audio")
+    args = parser.parse_args()
+    Recorder(args.port, args.directory, args.label).run()
