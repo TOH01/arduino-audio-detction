@@ -1,57 +1,60 @@
 import tensorflow as tf
-import numpy as np
 import os
 import json
 import argparse
 import shutil
 from sklearn.model_selection import train_test_split
-from data_processing import load_dataset_from_config, SAMPLE_RATE, N_MFCC, N_FFT, HOP_LENGTH, DURATION
+from data_processing import load_dataset_from_config
 from model import train_model
 from mel_filterbank import generate_mel_filterbank_header
+
 
 def sanitize_c_string(s):
     return s.replace('\\', '\\\\').replace('"', '\\"')
 
-# ------------------------------------------------------------------
-# 1. DSP PARAMS (Replaces Normalization Header)
-# ------------------------------------------------------------------
-def generate_dsp_params_header(out_dir):
+
+def generate_dsp_params_header(out_dir, sample_rate,
+                               duration, n_fft, hop_length):
     """
     Audio FFT parameters for Arduino deployment.
     Note: N_MFCC is now defined in mel_filterbank.h as N_MFCC_COEFFS.
     """
     file_path = os.path.join(out_dir, "dsp_params.h")
-    
+
     # Calculate expected dimensions
-    expected_samples = int(SAMPLE_RATE * DURATION)
+    expected_samples = int(sample_rate * duration)
     # This formula matches how Librosa/TensorFlow calculates the time steps
-    expected_frames = (expected_samples // HOP_LENGTH) + 1 
-    
+    expected_frames = (expected_samples // hop_length) + 1
+
     with open(file_path, 'w') as f:
         f.write('#ifndef DSP_PARAMS_H\n#define DSP_PARAMS_H\n\n')
         f.write('// Audio Preprocessing Constants\n')
-        f.write(f'#define SAMPLE_RATE {SAMPLE_RATE}\n')
-        f.write(f'#define N_FFT {N_FFT}\n')
-        f.write(f'#define HOP_LENGTH {HOP_LENGTH}\n')
+        f.write(f'#define SAMPLE_RATE {sample_rate}\n')
+        f.write(f'#define N_FFT {n_fft}\n')
+        f.write(f'#define HOP_LENGTH {hop_length}\n')
         f.write(f'#define EXPECTED_FRAMES {expected_frames} // The "Width" of the image\n')
         f.write('// Note: N_MFCC_COEFFS and N_MEL_FILTERS are defined in mel_filterbank.h\n')
         f.write('\n#endif // DSP_PARAMS_H\n')
 
-# ------------------------------------------------------------------
-# 2. MODEL CONFIG (Class Labels & Settings)
-# ------------------------------------------------------------------
-def generate_model_config_header(config, num_classes, model_name, out_dir):
+
+def generate_model_config_header(config, num_classes, model_name):
+    out_dir = config.get("out_dir")
     file_path = os.path.join(out_dir, "model_config.h")
+
+    if not out_dir:
+        raise RuntimeError("generate_model_config_header - out dir not found")
+
     confidence = config.get("confidence", 0.7)
-    
+
+
     with open(file_path, 'w') as f:
         f.write('#ifndef MODEL_CONFIG_H\n#define MODEL_CONFIG_H\n\n')
         f.write(f'#include "{model_name}.h"\n\n')
-        
+
         f.write(f'#define CONFIDENCE_THRESHOLD {confidence:.2f}\n')
         f.write(f'#define NUM_CLASSES {num_classes}\n')
         f.write(f'#define MODEL_NAME "{model_name}"\n\n')
-        
+
         f.write('static const char* class_labels[NUM_CLASSES] = {\n')
         # Sort motions by label to ensure array index matches label index
         sorted_motions = sorted(config["motions"], key=lambda x: x["label"])
@@ -59,99 +62,96 @@ def generate_model_config_header(config, num_classes, model_name, out_dir):
             f.write(f'  "{sanitize_c_string(motion["name"])}",\n')
         f.write('};\n\n')
         f.write('#endif // MODEL_CONFIG_H\n')
-        
+
+
 def create_full_model_from_config(config):
     out_dir = config.get("output_dir", "./output")
     model_name = config.get("name", "audio_model")
-    
+    sample_rate = config.get("sample_rate")
+    duration = config.get("audio_duration")
+    n_mfcc = config.get("n_mfcc")
+    n_fft = config.get("n_fft")
+    hop_length = config.get("hop_length")
+    data_type = config.get("data_type", "float32")
+
+    if not (n_mfcc and n_fft and hop_length):
+        raise RuntimeError("Librosas mfcc params missing in config")
+
+    if not (sample_rate and duration):
+        raise RuntimeError("Invalid config, check sample_rate and audio_duration")
+
     os.makedirs(out_dir, exist_ok=True)
-    
+
     # 1. Load Data
     X, y = load_dataset_from_config(config)
-    print(f"Data Shape: {X.shape}") 
-    
+    print(f"Data Shape: {X.shape}")
+
     # 2. Split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
+
     # 3. Train
-    print("Training...")
-    model = train_model(X_train, y_train, X_test, y_test, 
+    model = train_model(X_train, y_train, X_test, y_test,
                         epochs=config.get("epochs", 15),
                         batch_size=config.get("batch_size", 16))
-    
+
     # 4. Quantize & Convert
-    print("Converting to TFLite Int8...")
+
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    
-    # Create generator for quantization
-    def representative_dataset_gen():
-        for i in range(min(100, len(X_train))):
-            yield [X_train[i:i+1]] 
 
-    converter.representative_dataset = representative_dataset_gen
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    converter.inference_input_type = tf.int8
-    converter.inference_output_type = tf.int8
-    
+    if data_type == "int8":
+        print("Converting to TFLite Int8...")
+
+        def representative_dataset_gen():
+            for i in range(min(100, len(X_train))):
+                yield [X_train[i:i+1]]
+
+        converter.representative_dataset = representative_dataset_gen
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.inference_input_type = tf.int8
+        converter.inference_output_type = tf.int8
+
     tflite_model = converter.convert()
-    
+
     # 5. Save Files
     with open(os.path.join(out_dir, f"{model_name}.tflite"), 'wb') as f:
         f.write(tflite_model)
-        
+
     # 6. Generate C Arrays (The Model itself)
     print("Generating C header for model...")
     with open(os.path.join(out_dir, f"{model_name}.h"), 'w') as f:
-        f.write(f"// Auto-generated by pipeline\n")
-        f.write(f"#include <stdint.h>\n\n")
+        f.write("// Auto-generated by pipeline\n")
+        f.write("#include <stdint.h>\n\n")
         f.write(f"const unsigned char {model_name}[] = {{\n")
         f.write(", ".join(f"0x{b:02x}" for b in tflite_model))
         f.write(f"\n}};\nconst unsigned int {model_name}_len = {len(tflite_model)};\n")
 
     # 7. Generate Helper Headers (Deployment Configs)
     print("Generating Deployment headers...")
-    
+
     # A. DSP Params
-    generate_dsp_params_header(out_dir)
-    
+    generate_dsp_params_header(out_dir, sample_rate, duration, n_fft, hop_length)
+
     # B. Model Config
     num_classes = len(set(y))
-    generate_model_config_header(config, num_classes, model_name, out_dir)
-    
+    generate_model_config_header(config, num_classes, model_name)
+
     # C. Mel Filterbank (matches librosa exactly for Arduino deployment)
     generate_mel_filterbank_header(
         out_dir=out_dir,
-        sample_rate=SAMPLE_RATE,
-        n_fft=N_FFT,
+        sample_rate=sample_rate,
+        n_fft=n_fft,
         n_mels=40,  # Standard librosa default
-        n_mfcc=N_MFCC
+        n_mfcc=n_mfcc
     )
-    
-    # D. Copy all generated headers to deploy folder
-    deploy_dir = os.path.join(os.path.dirname(out_dir), "deploy")
-    if os.path.exists(deploy_dir):
-        headers_to_copy = [
-            f"{model_name}.h",
-            "dsp_params.h",
-            "model_config.h",
-            "mel_filterbank.h"
-        ]
-        for header in headers_to_copy:
-            src = os.path.join(out_dir, header)
-            dst = os.path.join(deploy_dir, header)
-            if os.path.exists(src):
-                shutil.copy2(src, dst)
-                print(f"  Copied {header} -> deploy/")
-    
-    print(f"Deployment files ready in {out_dir}/")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True)
     args = parser.parse_args()
-    
+
     with open(args.config, 'r') as f:
         config = json.load(f)
-        
+
     create_full_model_from_config(config)

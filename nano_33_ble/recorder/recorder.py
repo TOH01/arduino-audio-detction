@@ -5,32 +5,21 @@ import argparse
 import serial.tools.list_ports
 import os
 import datetime
-import uuid
 import threading
 import time
+import msvcrt
 
-try:
-    import msvcrt
-    WINDOWS = True
-except ImportError:
-    import select
-    import sys
-    WINDOWS = False
 
 BAUD = 115200
 SAMPLE_RATE = 16000
 DURATION = 1.0
 GAIN = 1.5
 
+
 def get_key():
-    if WINDOWS:
-        if msvcrt.kbhit():
-            return msvcrt.getch().decode('utf-8', errors='ignore')
-    else:
-        dr, _, _ = select.select([sys.stdin], [], [], 0)
-        if dr:
-            return sys.stdin.read(1)
-    return None
+    if msvcrt.kbhit():
+        return msvcrt.getch().decode('utf-8', errors='ignore')
+
 
 class Recorder:
     def __init__(self, port, out_dir, label):
@@ -59,8 +48,7 @@ class Recorder:
     def save(self):
         samples = np.array(self.buffer[:self.samples_needed], dtype=np.int16)
         ts = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        uid = str(uuid.uuid4())[-12:]
-        path = os.path.join(self.out_dir, f"{self.label}.{uid}.{ts}.wav")
+        path = os.path.join(self.out_dir, f"{self.label}.{ts}.wav")
         with wave.open(path, "w") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
@@ -78,7 +66,8 @@ class Recorder:
                 if key == ' ' and not self.recording:
                     self.count += 1
                     print(f"Recording {self.count}...")
-                    time.sleep(0.15) # prevent keyboard noise
+                    # prevent noise from pressing keycap appearing in recording
+                    time.sleep(0.15)
                     self.ser.reset_input_buffer()
                     self.buffer = []
                     self.recording = True
@@ -89,6 +78,7 @@ class Recorder:
             pass
         self.ser.close()
         print(f"Done. Recorded {self.count} samples.")
+
 
 if __name__ == "__main__":
     print("Ports:", [p.device for p in serial.tools.list_ports.comports()])

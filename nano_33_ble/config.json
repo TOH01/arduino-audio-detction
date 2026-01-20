@@ -1,11 +1,14 @@
 {
     "name": "audio_model",
     "sample_rate": 16000,
-    "motion_duration": 1.0,
+    "audio_duration": 1.0,
     "epochs": 20,
     "batch_size": 16,
     "data_type": "int8",
     "output_dir": "./audio_output",
+    "n_fft": 2048,
+    "n_mffc": 13,
+    "hop_length": 512,
     "motions": [
         {
             "name": "noise",
