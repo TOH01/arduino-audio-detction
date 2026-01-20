@@ -40,7 +40,7 @@ def main():
         config = json.load(f)
 
     out_dir = config.get("output_dir", "")
-    name = config.get("name", "")
+    model_name = config.get("name", "")
     sample_rate = config.get("sample_rate")
     duration = config.get("audio_duration")
     n_mfcc = config.get("n_mfcc")
@@ -55,7 +55,7 @@ def main():
     else:
         raise RuntimeError("Invalid config, check sample_rate and audio_duration")
 
-    model_path = os.path.join(out_dir, f"{name}.tflite")
+    model_path = os.path.join(out_dir, f"{model_name}.tflite")
     print(f"Using model: {model_path}")
 
     interpreter = tf.lite.Interpreter(model_path=model_path)
@@ -66,8 +66,6 @@ def main():
     expected_shape = input_details[0]['shape']
     input_dtype = input_details[0]['dtype']
     print(f"Model expects input shape: {expected_shape}, dtype: {input_dtype}")
-
-    expected_samples = int(sample_rate * duration)
 
     results = []
     total_correct = 0
@@ -153,7 +151,7 @@ def main():
         print(f"Overall Accuracy: {overall_acc:.2%} ({total_correct}/{total_samples})")
 
     if results:
-        csv_path = os.path.join(out_dir, f"{name}_evaluation.csv")
+        csv_path = os.path.join(out_dir, f"{model_name}_evaluation.csv")
         with open(csv_path, mode='w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=results[0].keys(), delimiter=';')
             writer.writeheader()

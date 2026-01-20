@@ -47,7 +47,7 @@ class Recorder:
 
     def save(self):
         samples = np.array(self.buffer[:self.samples_needed], dtype=np.int16)
-        ts = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        ts = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
         path = os.path.join(self.out_dir, f"{self.label}.{ts}.wav")
         with wave.open(path, "w") as wf:
             wf.setnchannels(1)

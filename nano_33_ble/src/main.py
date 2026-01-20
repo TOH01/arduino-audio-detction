@@ -32,13 +32,12 @@ def generate_dsp_params_header(out_dir, sample_rate,
         f.write(f'#define SAMPLE_RATE {sample_rate}\n')
         f.write(f'#define N_FFT {n_fft}\n')
         f.write(f'#define HOP_LENGTH {hop_length}\n')
-        f.write(f'#define EXPECTED_FRAMES {expected_frames} // The "Width" of the image\n')
-        f.write('// Note: N_MFCC_COEFFS and N_MEL_FILTERS are defined in mel_filterbank.h\n')
+        f.write(f'#define EXPECTED_FRAMES {expected_frames}\n')
         f.write('\n#endif // DSP_PARAMS_H\n')
 
 
 def generate_model_config_header(config, num_classes, model_name):
-    out_dir = config.get("out_dir")
+    out_dir = config.get("output_dir")
     file_path = os.path.join(out_dir, "model_config.h")
 
     if not out_dir:
@@ -65,6 +64,7 @@ def generate_model_config_header(config, num_classes, model_name):
 
 
 def create_full_model_from_config(config):
+    print(config)
     out_dir = config.get("output_dir", "./output")
     model_name = config.get("name", "audio_model")
     sample_rate = config.get("sample_rate")

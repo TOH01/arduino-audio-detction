@@ -1,5 +1,5 @@
 file;motion;expected_label;predicted_label;confidence;correct
-noise.0298ec2b1277.2026-01-11_17-35-10.wav;noise;0;0;0.9961;True
+noise.0298ec2b1277.2026-01-11_17-35-10.wav;noise;0;0;0.9648;True
 noise.0b54199434d7.2026-01-11_17-35-14.wav;noise;0;0;0.9961;True
 noise.11d79d9f7b00.2026-01-11_17-35-26.wav;noise;0;0;0.9961;True
 noise.1ef0aa94174e.2026-01-11_17-35-19.wav;noise;0;0;0.9961;True
