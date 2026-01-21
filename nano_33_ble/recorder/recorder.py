@@ -66,7 +66,7 @@ class Recorder:
                 if key == ' ' and not self.recording:
                     self.count += 1
                     print(f"Recording {self.count}...")
-                    # prevent noise from pressing keycap appearing in recording
+                    # prevent keystroke noise from appearing in audio file
                     time.sleep(0.15)
                     self.ser.reset_input_buffer()
                     self.buffer = []

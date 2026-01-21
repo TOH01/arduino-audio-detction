@@ -15,14 +15,12 @@ def sanitize_c_string(s):
 
 def generate_dsp_params_header(out_dir, sample_rate,
                                duration, n_fft, hop_length):
-    """
-    Audio FFT parameters for Arduino deployment.
-    Note: N_MFCC is now defined in mel_filterbank.h as N_MFCC_COEFFS.
-    """
+
     file_path = os.path.join(out_dir, "dsp_params.h")
 
     # Calculate expected dimensions
     expected_samples = int(sample_rate * duration)
+
     # This formula matches how Librosa/TensorFlow calculates the time steps
     expected_frames = (expected_samples // hop_length) + 1
 
@@ -55,6 +53,7 @@ def generate_model_config_header(config, num_classes, model_name):
         f.write(f'#define MODEL_NAME "{model_name}"\n\n')
 
         f.write('static const char* class_labels[NUM_CLASSES] = {\n')
+
         # Sort motions by label to ensure array index matches label index
         sorted_motions = sorted(config["motions"], key=lambda x: x["label"])
         for motion in sorted_motions:

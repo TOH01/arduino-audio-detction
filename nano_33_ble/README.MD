@@ -1,6 +1,6 @@
 # NANO 33 BLE Audio Keyword Detection
 
-TinyML keyword detection for Arduino Nano 33 BLE Sense Rev 2.
+TinyML audio keyword detection for Arduino Nano 33 BLE Sense Rev 2.
 
 ## Workflow Overview
 
@@ -15,52 +15,44 @@ TinyML keyword detection for Arduino Nano 33 BLE Sense Rev 2.
 2. Hold the microphone ~15 cm from your mouth
 
 ### Triggered Recorder
-Use for clean keyword recordings with proper timing:
+
+Example (see argparse for details on params):
 
 ```bash
 python recorder/recorder_triggered.py -p COM5 -d recordings/go -l go
 ```
 
-- Press **SPACE** to start a 1-second recording
-- Say the keyword immediately after the beep
-- Press **Q** to quit
-
 ## 2. Training
 
-Train a new model using VS Code:
-- Open **Run and Debug** panel (Ctrl+Shift+D)
-- Select **"Train Audio Model"**
-- Press F5
-
-Or via command line:
+Train model using command line:
 ```bash
 cd nano_33_ble
 python src/main.py --config config.json
 ```
 
-Output files are saved to `audio_output/`:
-- `audio_model.tflite` - Quantized model
-- `audio_model.h` - C header for Arduino
-- `dsp_params.h` - Audio preprocessing constants
-- `model_config.h` - Class labels and settings
+Output files are saved to specified output_dir in config:
+- `audio_model.tflite` - Needed for validation
+- `audio_model.h`, `dsp_params.h`, `model_config.h`, `mel_filterbank.h` - Needed for deploy.ino
 
 ## 3. Validation
 
-Test the model on held-out validation data:
-- Select **"Validate Audio Model"** in VS Code
-- Press F5
-
-Or via command line:
+Validate model using command line:
 ```bash
 cd nano_33_ble
 python src/validate_model.py config.json
 ```
 
-Results are saved to `audio_output/audio_model_evaluation.csv`
+Results will be saved in specified output dir. For validation to work properly `validation_data_path` needs to be set for each motion in the config.
+Validation path should include new data, which the model will be validated against.
 
 ## 4. Deployment
 
-Copy the header files from `audio_output/` to `deploy/` and flash `deploy/deploy.ino`.
+Copy the required header files from Step 2 into the same location as deploy.ino.
+
+## 5. Notes
+
+Changing PDM mic gain needs to be done in multiple places `PDM.setGain(X);` in recorder.ino, `GAIN = X.X` in recorder.py
+and lastly `#define GAIN_FACTOR 1.5f` aswell as `PDM.setGain(80);` in deploy.ino
 
 ## Resources
 

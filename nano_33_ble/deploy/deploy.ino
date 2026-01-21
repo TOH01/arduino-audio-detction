@@ -1,11 +1,3 @@
-/*
- * TinyML Audio Classifier (Keyword Spotting)
- * Production Version
- * Fixes included:
- * 1. Log Scaling (4.34x) to match Librosa dB scale
- * 2. Shadow Buffer to prevent input tensor corruption by TFLite
- */
-
 #include <PDM.h>
 #include <TensorFlowLite.h>
 #include <arduinoFFT.h>
@@ -17,29 +9,17 @@
 #include "mel_filterbank.h"
 #include "model_config.h"
 
-// ==========================================
-// CONFIG
-// ==========================================
-// Software gain to match recorder.py (which uses GAIN = 1.5)
+// Value from recorder.py (GAIN = 1.5)
 #define GAIN_FACTOR 1.5f
 
-// ==========================================
-// GLOBALS
-// ==========================================
-
-// Audio Input Buffers
-// PDM usually provides ~256 samples per callback
 short sampleBuffer[512];
-volatile int samplesRead = 0; // Counter for the ISR
+volatile int samplesRead = 0;
 
-// Processing Buffers
 float audioWindow[N_FFT];
 float vReal[N_FFT];
 float vImag[N_FFT];
-int samplesSinceInference = 0; // Accumulator
+int samplesSinceInference = 0;
 
-// SHADOW BUFFER (CRITICAL FIX):
-// Maintained separately from TFLite arena to prevent data corruption
 int8_t spectrogram[EXPECTED_FRAMES][N_MFCC_COEFFS];
 
 // DSP Objects
@@ -54,25 +34,16 @@ TfLiteTensor *tflOutputTensor = nullptr;
 
 // Memory Arena
 constexpr int kTensorArenaSize = 60 * 1024;
-alignas(16) uint8_t tensorArena[kTensorArenaSize];
+uint8_t tensorArena[kTensorArenaSize];
 
-// ==========================================
-// ISR (Interrupt Service Routine)
-// ==========================================
+
 void onPDMdata() {
-  // Query bytes available
   int bytesAvailable = PDM.available();
-
-  // Read into the buffer
   PDM.read(sampleBuffer, bytesAvailable);
 
   // Update count (16-bit samples = bytes / 2)
   samplesRead = bytesAvailable / 2;
 }
-
-// ==========================================
-// DSP HELPERS
-// ==========================================
 
 void compute_features(float *input_audio, int8_t *output_features) {
   // 1. Copy to FFT buffers
@@ -86,7 +57,8 @@ void compute_features(float *input_audio, int8_t *output_features) {
   FFT.compute(FFTDirection::Forward);
   FFT.complexToMagnitude();
 
-  // CRITICAL: librosa uses POWER spectrum (magnitude^2), not magnitude!
+  // librosa uses magnitude^2
+  // https://librosa.org/doc/latest/generated/librosa.power_to_db.html
   for (int i = 0; i < N_FFT_BINS; i++) {
     vReal[i] = vReal[i] * vReal[i];
   }
@@ -100,9 +72,9 @@ void compute_features(float *input_audio, int8_t *output_features) {
       sum += vReal[k] * mel_filterbank[m][k];
     }
 
-    // FIX MATCHING PYTHON:
     // Librosa uses 10 * log10(x) = 10 * ln(x) / ln(10)
     // Scaling factor 10 / ln(10) ~= 4.3429
+    // https://librosa.org/doc/latest/generated/librosa.power_to_db.html
     mel_energies[m] = 4.342944819f * logf(sum + 1e-6f);
   }
 
@@ -131,32 +103,21 @@ void compute_features(float *input_audio, int8_t *output_features) {
   }
 }
 
-// ==========================================
-// MAIN SETUP
-// ==========================================
 void setup() {
   Serial.begin(115200);
 
-  // Wait for serial but timeout after 3s
   long start = millis();
   while (!Serial && (millis() - start < 3000))
     ;
 
-  Serial.println("--- Starting Audio Classifier ---");
+  Serial.println("--- Start Init Audio Classifier ---");
 
-  // Initialize spectrogram to safe zero point
   memset(spectrogram, 0, sizeof(spectrogram));
 
   pinMode(LEDR, OUTPUT);
   pinMode(LEDG, OUTPUT);
   pinMode(LEDB, OUTPUT);
 
-  // LED Check (Blue ON)
-  digitalWrite(LEDR, HIGH);
-  digitalWrite(LEDG, HIGH);
-  digitalWrite(LEDB, LOW);
-
-  // 1. TFLite Init
   tflModel = tflite::GetModel(audio_model);
   if (tflModel->version() != TFLITE_SCHEMA_VERSION) {
     Serial.println("Error: Model schema mismatch!");
@@ -166,8 +127,7 @@ void setup() {
     }
   }
 
-  tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver,
-                                                tensorArena, kTensorArenaSize);
+  tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver, tensorArena, kTensorArenaSize);
 
   if (tflInterpreter->AllocateTensors() != kTfLiteOk) {
     Serial.println("Error: AllocateTensors failed!");
@@ -180,12 +140,8 @@ void setup() {
   tflInputTensor = tflInterpreter->input(0);
   tflOutputTensor = tflInterpreter->output(0);
 
-  // Init spectrogram with actual zero point from model
   memset(spectrogram, tflInputTensor->params.zero_point, sizeof(spectrogram));
 
-  Serial.println("TFLite Init OK");
-
-  // 2. Microphone Init
   PDM.onReceive(onPDMdata);
   if (!PDM.begin(1, SAMPLE_RATE)) {
     Serial.println("Error: PDM Start Failed!");
@@ -193,21 +149,13 @@ void setup() {
       ;
   }
 
-  // Match the gain used during recording
+  // Must match value from recorder.ino
   PDM.setGain(80);
 
-  Serial.println("Microphone OK");
-  Serial.println("--- Setup Complete ---");
-
-  // LED Off
-  digitalWrite(LEDB, HIGH);
+  Serial.println("--- Init Complete ---");
 }
 
-// ==========================================
-// MAIN LOOP
-// ==========================================
 void loop() {
-  // 1. Atomic Read of Interrupt Data
   int localSamplesRead = 0;
   short localBuffer[512];
 
@@ -268,26 +216,21 @@ void loop() {
       int8_t mfcc_col[N_MFCC_COEFFS];
       compute_features(audioWindow, mfcc_col);
 
-      // B. Update SHADOW Spectrogram (FIXED)
       int time_steps = EXPECTED_FRAMES;
 
-      // Shift logic
       for (int t = 0; t < time_steps - 1; t++) {
         for (int c = 0; c < N_MFCC_COEFFS; c++) {
           spectrogram[t][c] = spectrogram[t + 1][c];
         }
       }
 
-      // Add new col at the end
       for (int c = 0; c < N_MFCC_COEFFS; c++) {
         spectrogram[time_steps - 1][c] = mfcc_col[c];
       }
 
-      // C. Copy to TFLite Input Tensor (FIXED: Full Copy every time)
       int8_t *input_data = tflInputTensor->data.int8;
       memcpy(input_data, spectrogram, sizeof(spectrogram));
 
-      // D. Run Inference
       TfLiteStatus invoke_status = tflInterpreter->Invoke();
       if (invoke_status == kTfLiteOk) {
         float scale = tflOutputTensor->params.scale;
