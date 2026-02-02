@@ -30,6 +30,8 @@ cd nano_33_ble
 python src/main.py --config config.json
 ```
 
+If needed, modify the provided json config. It is possible to change all training parameters without editing the code.
+
 Output files are saved to specified output_dir in config:
 - `audio_model.tflite` - Needed for validation
 - `audio_model.h`, `dsp_params.h`, `model_config.h`, `mel_filterbank.h` - Needed for deploy.ino
