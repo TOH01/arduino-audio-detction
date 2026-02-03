@@ -5,146 +5,55 @@ import argparse
 from sklearn.model_selection import train_test_split
 from data_processing import load_dataset_from_config
 from model import train_model
-from mel_filterbank import generate_mel_filterbank_header
-from wav_to_header import convert_wav_to_header
-
-
-def generate_dsp_params_header(out_dir, sample_rate,
-                               duration, n_fft, hop_length):
-
-    file_path = os.path.join(out_dir, "dsp_params.h")
-
-    # Calculate expected dimensions
-    expected_samples = int(sample_rate * duration)
-
-    # This formula matches how Librosa/TensorFlow calculates the time steps
-    expected_frames = (expected_samples // hop_length) + 1
-
-    with open(file_path, 'w') as f:
-        f.write('#ifndef DSP_PARAMS_H\n#define DSP_PARAMS_H\n\n')
-        f.write('// Audio Preprocessing Constants\n')
-        f.write(f'#define SAMPLE_RATE {sample_rate}\n')
-        f.write(f'#define N_FFT {n_fft}\n')
-        f.write(f'#define HOP_LENGTH {hop_length}\n')
-        f.write(f'#define EXPECTED_FRAMES {expected_frames}\n')
-        f.write('\n#endif // DSP_PARAMS_H\n')
-
-
-def generate_model_config_header(config, num_classes, model_name, test_audio = False):
-    out_dir = config.get("output_dir")
-    file_path = os.path.join(out_dir, "model_config.h")
-
-    if not out_dir:
-        raise RuntimeError("generate_model_config_header - out dir not found")
-
-    confidence = config.get("confidence", 0.7)
-
-
-    with open(file_path, 'w') as f:
-        f.write('#ifndef MODEL_CONFIG_H\n#define MODEL_CONFIG_H\n\n')
-        f.write(f'#include "{model_name}.h"\n\n')
-
-        f.write(f'#define CONFIDENCE_THRESHOLD {confidence:.2f}\n')
-        f.write(f'#define NUM_CLASSES {num_classes}\n')
-        f.write(f'#define MODEL_NAME "{model_name}"\n\n')
-
-        if test_audio:
-            f.write('#define INJECT_TEST_AUDIO\n\n')
-
-        f.write('static const char* class_labels[NUM_CLASSES] = {\n')
-
-        # Sort motions by label to ensure array index matches label index
-        sorted_motions = sorted(config["motions"], key=lambda x: x["label"])
-        for motion in sorted_motions:
-            f.write(f'  "{motion["name"]}",\n')
-        f.write('};\n\n')
-        f.write('#endif // MODEL_CONFIG_H\n')
+from header_helper import generate_model_header, generate_model_config_header, generate_dsp_params_header, generate_mel_filterbank_header, convert_wav_to_header
 
 
 def create_full_model_from_config(config):
-    out_dir = config.get("output_dir", "./output")
-    model_name = config.get("name", "audio_model")
-    sample_rate = config.get("sample_rate")
-    duration = config.get("audio_duration")
-    n_mfcc = config.get("n_mfcc")
-    n_fft = config.get("n_fft")
-    hop_length = config.get("hop_length")
-    data_type = config.get("data_type", "float32")
-    test_audio_path = config.get("inject_test_path", None)
+    out_dir = config["output_dir"]
+    model_name = config["name"]
+    sample_rate = config["sample_rate"]
+    duration = config["audio_duration"]
+    n_mfcc = config["n_mfcc"]
+    n_fft = config["n_fft"]
+    hop_length = config["hop_length"]
+    motions = config["motions"]
+    epochs = config["epochs"]
+    batch_size = config["batch_size"]
+    confidence = config["confidence"]
+    duration = config["audio_duration"]
+    test_audio_path = config.get("inject_test_path", None)     # optional parameter
 
-    if not (n_mfcc and n_fft and hop_length):
-        raise RuntimeError("Librosas mfcc params missing in config")
-
-    if not (sample_rate and duration):
-        raise RuntimeError("Invalid config, check sample_rate and audio_duration")
-
-    os.makedirs(out_dir, exist_ok=True)
-
-    # 1. Load Data
-    X, y = load_dataset_from_config(config)
-    print(f"Data Shape: {X.shape}")
-
-    # 2. Split
+    X, y = load_dataset_from_config(sample_rate, int(sample_rate * duration), n_mfcc, n_fft, hop_length, motions)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # 3. Train
-    model = train_model(X_train, y_train, X_test, y_test,
-                        epochs=config.get("epochs", 15),
-                        batch_size=config.get("batch_size", 16))
-
-    # 4. Quantize & Convert
+    model = train_model(X_train, y_train, X_test, y_test, epochs=epochs, batch_size=batch_size)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-    if data_type == "int8":
-        print("Converting to TFLite Int8")
+    def representative_dataset_gen():
+        for i in range(min(100, len(X_train))):
+            yield [X_train[i:i+1]]
 
-        def representative_dataset_gen():
-            for i in range(min(100, len(X_train))):
-                yield [X_train[i:i+1]]
-
-        converter.representative_dataset = representative_dataset_gen
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.inference_input_type = tf.int8
-        converter.inference_output_type = tf.int8
+    converter.representative_dataset = representative_dataset_gen
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
 
     tflite_model = converter.convert()
 
-    # 5. Save Files
+    # save model for validate_model.py
     with open(os.path.join(out_dir, f"{model_name}.tflite"), 'wb') as f:
         f.write(tflite_model)
 
-    # 6. Generate C Arrays (The Model itself)
-    print("Generating C header for model")
-    with open(os.path.join(out_dir, f"{model_name}.h"), 'w') as f:
-        f.write("// Auto-generated by pipeline\n")
-        f.write("#include <stdint.h>\n\n")
-        f.write(f"const unsigned char {model_name}[] = {{\n")
-        f.write(", ".join(f"0x{b:02x}" for b in tflite_model))
-        f.write(f"\n}};\nconst unsigned int {model_name}_len = {len(tflite_model)};\n")
-
-    # 7. Generate Helper Headers (Deployment Configs)
-    print("Generating Deployment headers")
-
-    # A. DSP Params
-    generate_dsp_params_header(out_dir, sample_rate, duration, n_fft, hop_length)
-
-    # B. Model Config
-    num_classes = len(set(y))
-    generate_model_config_header(config, num_classes, model_name, test_audio=test_audio_path)
-
-    # C. Mel Filterbank (matches librosa exactly for Arduino deployment)
-    generate_mel_filterbank_header(
-        out_dir=out_dir,
-        sample_rate=sample_rate,
-        n_fft=n_fft,
-        n_mels=40,  # Standard librosa default
-        n_mfcc=n_mfcc
-    )
-
+    # auto header generation
+    generate_model_header(out_dir, model_name, tflite_model)
+    generate_dsp_params_header(out_dir, sample_rate, n_fft, hop_length, ((sample_rate * duration) // hop_length) + 1)
+    generate_model_config_header(out_dir, model_name, motions, confidence, test_audio=test_audio_path)
+    generate_mel_filterbank_header(out_dir, sample_rate, n_fft, n_mfcc)
+    
     if test_audio_path:
-        convert_wav_to_header(test_audio_path, out_dir, sample_rate=sample_rate)
+        convert_wav_to_header(out_dir, test_audio_path, sample_rate)
 
 
 if __name__ == '__main__':

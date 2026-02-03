@@ -4,7 +4,6 @@
     "audio_duration": 1.0,
     "epochs": 20,
     "batch_size": 16,
-    "data_type": "int8",
     "output_dir": "./deploy",
     "n_fft": 2048,
     "n_mfcc": 13,

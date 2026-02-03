@@ -27,25 +27,11 @@ def get_padded(audio, expected_samples, mode='left'):
     return audio
 
 
-def load_dataset_from_config(config):
+def load_dataset_from_config(sample_rate, expected_samples, n_mfcc, n_fft, hop_length, motions):
     X = []
     y = []
 
-    sample_rate = config.get("sample_rate")
-    duration = config.get("audio_duration")
-    n_mfcc = config.get("n_mfcc")
-    n_fft = config.get("n_fft")
-    hop_length = config.get("hop_length")
-
-    if not (n_mfcc and n_fft and hop_length):
-        raise RuntimeError("Librosas mfcc params missing in config")
-
-    if sample_rate and duration:
-        expected_samples = int(sample_rate * duration)
-    else:
-        raise RuntimeError("Invalid config, check sample_rate and audio_duration")
-
-    for motion in config["motions"]:
+    for motion in motions:
         label = motion["label"]
         name = motion["name"]
         data_count = 0
