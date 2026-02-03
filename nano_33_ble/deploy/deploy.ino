@@ -16,6 +16,10 @@
 // Value from recorder.py (GAIN = 1.5)
 #define GAIN_FACTOR 1.5f
 
+#ifdef INJECT_TEST_AUDIO
+size_t inject_idx = 0;
+#endif
+
 short sampleBuffer[512];
 volatile int samplesRead = 0;
 
@@ -115,8 +119,6 @@ void setup() {
 
   Serial.println("--- Start Init Audio Classifier ---");
 
-  memset(spectrogram, 0, sizeof(spectrogram));
-
   pinMode(LEDR, OUTPUT);
   pinMode(LEDG, OUTPUT);
   pinMode(LEDB, OUTPUT);
@@ -145,7 +147,7 @@ void setup() {
   tflOutputTensor = tflInterpreter->output(0);
 
   memset(spectrogram, tflInputTensor->params.zero_point, sizeof(spectrogram));
-
+#ifndef INJECT_TEST_AUDIO
   PDM.onReceive(onPDMdata);
   if (!PDM.begin(1, SAMPLE_RATE)) {
     Serial.println("Error: PDM Start Failed!");
@@ -155,6 +157,7 @@ void setup() {
 
   // Must match value from recorder.ino
   PDM.setGain(80);
+#endif
 
   Serial.println("--- Init Complete ---");
 }
@@ -162,6 +165,25 @@ void setup() {
 void loop() {
   int localSamplesRead = 0;
   short localBuffer[512];
+
+#ifdef INJECT_TEST_AUDIO
+  if (samplesRead == 0) {
+    if (inject_idx >= test_audio_len)
+      inject_idx = 0;
+    int chunk = 512;
+    int remaining = test_audio_len - inject_idx;
+    int to_copy = (remaining < chunk) ? remaining : chunk;
+    memcpy(sampleBuffer, &test_audio_data[inject_idx], to_copy * sizeof(short));
+    inject_idx += to_copy;
+    if (to_copy < chunk) {
+      memcpy(&sampleBuffer[to_copy], &test_audio_data[0],
+             (chunk - to_copy) * sizeof(short));
+      inject_idx = chunk - to_copy;
+    }
+    samplesRead = chunk;
+    delay(32);
+  }
+#endif
 
   if (samplesRead > 0) {
     noInterrupts();

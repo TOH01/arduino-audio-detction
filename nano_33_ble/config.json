@@ -10,7 +10,7 @@
     "n_mfcc": 13,
     "hop_length": 512,
     "confidence": 0.6,
-    "inject_test_path": "recorder/recordings/open_val/open.2026-02-03_18-48-53-688929.wav",
+    "inject_test_path": "recorder/recordings/close_val/close.2026-02-03_18-48-34-185716.wav",
     "motions": [
         {
             "name": "noise",
