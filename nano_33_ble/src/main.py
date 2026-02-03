@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from data_processing import load_dataset_from_config
 from model import train_model
 from mel_filterbank import generate_mel_filterbank_header
+from wav_to_header import convert_wav_to_header
 
 
 def sanitize_c_string(s):
@@ -33,7 +34,7 @@ def generate_dsp_params_header(out_dir, sample_rate,
         f.write('\n#endif // DSP_PARAMS_H\n')
 
 
-def generate_model_config_header(config, num_classes, model_name):
+def generate_model_config_header(config, num_classes, model_name, test_audio = False):
     out_dir = config.get("output_dir")
     file_path = os.path.join(out_dir, "model_config.h")
 
@@ -50,6 +51,9 @@ def generate_model_config_header(config, num_classes, model_name):
         f.write(f'#define CONFIDENCE_THRESHOLD {confidence:.2f}\n')
         f.write(f'#define NUM_CLASSES {num_classes}\n')
         f.write(f'#define MODEL_NAME "{model_name}"\n\n')
+
+        if test_audio:
+            f.write('#define INJECT_TEST_AUDIO\n\n')
 
         f.write('static const char* class_labels[NUM_CLASSES] = {\n')
 
@@ -71,6 +75,7 @@ def create_full_model_from_config(config):
     n_fft = config.get("n_fft")
     hop_length = config.get("hop_length")
     data_type = config.get("data_type", "float32")
+    test_audio_path = config.get("inject_test_path", None)
 
     if not (n_mfcc and n_fft and hop_length):
         raise RuntimeError("Librosas mfcc params missing in config")
@@ -132,7 +137,7 @@ def create_full_model_from_config(config):
 
     # B. Model Config
     num_classes = len(set(y))
-    generate_model_config_header(config, num_classes, model_name)
+    generate_model_config_header(config, num_classes, model_name, test_audio=test_audio_path)
 
     # C. Mel Filterbank (matches librosa exactly for Arduino deployment)
     generate_mel_filterbank_header(
@@ -142,6 +147,9 @@ def create_full_model_from_config(config):
         n_mels=40,  # Standard librosa default
         n_mfcc=n_mfcc
     )
+
+    if test_audio_path:
+        convert_wav_to_header(test_audio_path, out_dir, sample_rate=sample_rate)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,10 @@
 #include "mel_filterbank.h"
 #include "model_config.h"
 
+#ifdef INJECT_TEST_AUDIO
+#include "audio_inject.h"
+#endif
+
 // Value from recorder.py (GAIN = 1.5)
 #define GAIN_FACTOR 1.5f
 
@@ -35,7 +39,6 @@ TfLiteTensor *tflOutputTensor = nullptr;
 // Memory Arena
 constexpr int kTensorArenaSize = 60 * 1024;
 uint8_t tensorArena[kTensorArenaSize];
-
 
 void onPDMdata() {
   int bytesAvailable = PDM.available();
@@ -127,7 +130,8 @@ void setup() {
     }
   }
 
-  tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver, tensorArena, kTensorArenaSize);
+  tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver,
+                                                tensorArena, kTensorArenaSize);
 
   if (tflInterpreter->AllocateTensors() != kTfLiteOk) {
     Serial.println("Error: AllocateTensors failed!");
