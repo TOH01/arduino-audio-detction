@@ -1,5 +1,5 @@
 src/data_gather/libraries
-src/venv
+venv
 __pycache__/
 libraries
 .vscode/

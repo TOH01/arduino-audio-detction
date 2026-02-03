@@ -55,7 +55,7 @@ def generate_mel_filterbank_header(
         f.write(f"#define N_MFCC_COEFFS {n_mfcc}\n\n")
 
         f.write("// Mel filterbank weights [n_mels][n_fft_bins]\n")
-        f.write("static const float mel_filterbank[N_MEL_FILTERS][N_FFT_BINS] = {{\n")
+        f.write("static const float mel_filterbank[N_MEL_FILTERS][N_FFT_BINS] = {\n")
 
         for i, row in enumerate(mel_basis):
             f.write("  {")
@@ -66,7 +66,7 @@ def generate_mel_filterbank_header(
         f.write("};\n\n")
 
         f.write("// DCT-II matrix for MFCC [n_mfcc][n_mels]\n")
-        f.write("static const float dct_matrix[N_MFCC_COEFFS][N_MEL_FILTERS] = {{\n")
+        f.write("static const float dct_matrix[N_MFCC_COEFFS][N_MEL_FILTERS] = {\n")
 
         for i, row in enumerate(dct_matrix):
             f.write("  {")

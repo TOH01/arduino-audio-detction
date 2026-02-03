@@ -5,10 +5,11 @@
     "epochs": 20,
     "batch_size": 16,
     "data_type": "int8",
-    "output_dir": "./audio_output",
+    "output_dir": "./deploy",
     "n_fft": 2048,
     "n_mfcc": 13,
     "hop_length": 512,
+    "confidence": 0.6,
     "motions": [
         {
             "name": "noise",
@@ -17,16 +18,16 @@
             "validation_data_path": "recorder/recordings/noise_val"
         },
         {
-            "name": "go",
+            "name": "open",
             "label": 1,
-            "data_path": "recorder/recordings/go",
-            "validation_data_path": "recorder/recordings/go_val"
+            "data_path": "recorder/recordings/open",
+            "validation_data_path": "recorder/recordings/open_val"
         },
         {
-            "name": "stop",
+            "name": "close",
             "label": 2,
-            "data_path": "recorder/recordings/stop",
-            "validation_data_path": "recorder/recordings/stop_val"
+            "data_path": "recorder/recordings/close",
+            "validation_data_path": "recorder/recordings/close_val"
         }
     ]
 }

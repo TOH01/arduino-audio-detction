@@ -3,14 +3,14 @@
 
 #include "audio_model.h"
 
-#define CONFIDENCE_THRESHOLD 0.70
+#define CONFIDENCE_THRESHOLD 0.60
 #define NUM_CLASSES 3
 #define MODEL_NAME "audio_model"
 
 static const char* class_labels[NUM_CLASSES] = {
   "noise",
-  "go",
-  "stop",
+  "open",
+  "close",
 };
 
 #endif // MODEL_CONFIG_H

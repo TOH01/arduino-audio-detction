@@ -2,7 +2,6 @@ import tensorflow as tf
 import os
 import json
 import argparse
-import shutil
 from sklearn.model_selection import train_test_split
 from data_processing import load_dataset_from_config
 from model import train_model
