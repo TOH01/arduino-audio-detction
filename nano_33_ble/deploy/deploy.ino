@@ -30,17 +30,14 @@ int samplesSinceInference = 0;
 
 int8_t spectrogram[EXPECTED_FRAMES][N_MFCC_COEFFS];
 
-// DSP Objects
 ArduinoFFT<float> FFT = ArduinoFFT<float>(vReal, vImag, N_FFT, SAMPLE_RATE);
 
-// TFLite Objects
 tflite::AllOpsResolver tflOpsResolver;
 const tflite::Model *tflModel = nullptr;
 tflite::MicroInterpreter *tflInterpreter = nullptr;
 TfLiteTensor *tflInputTensor = nullptr;
 TfLiteTensor *tflOutputTensor = nullptr;
 
-// Memory Arena
 constexpr int kTensorArenaSize = 60 * 1024;
 uint8_t tensorArena[kTensorArenaSize];
 

@@ -2,14 +2,6 @@ import numpy as np
 import librosa
 import os
 
-
-def hz_to_mel(hz):
-    return 2595.0 * np.log10(1.0 + hz / 700.0)
-
-
-def mel_to_hz(mel):
-    return 700.0 * (10.0 ** (mel / 2595.0) - 1.0)
-
 def generate_mel_filterbank_header(
     out_dir: str,
     sample_rate: int = 16000,
@@ -79,7 +71,5 @@ def generate_mel_filterbank_header(
         f.write("#endif // MEL_FILTERBANK_H\n")
 
     print(f"Generated {file_path}")
-    print(f"  - Mel filters: {n_mels} x {n_bins}")
-    print(f"  - DCT matrix: {n_mfcc} x {n_mels}")
-
-    return file_path
+    print(f"Mel filters: {n_mels} x {n_bins}")
+    print(f"DCT matrix: {n_mfcc} x {n_mels}")

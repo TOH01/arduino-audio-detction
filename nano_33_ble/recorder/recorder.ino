@@ -1,4 +1,4 @@
-/* 
+/*
 Code by: Ipyana Issah Mwaisekwa
 */
 
@@ -21,7 +21,7 @@ short transmitBuffer[4096];
 int transmitBufferIndex = 0;
 
 void setup() {
-  Serial.begin(115200);  // Use a higher baud rate for faster data transfer
+  Serial.begin(115200); // Use a higher baud rate for faster data transfer
 
   // Configure the data receive callback
   PDM.onReceive(onPDMdata);
@@ -31,7 +31,8 @@ void setup() {
   // - a 16 kHz sample rate for the Arduino Nano 33 BLE Sense
   if (!PDM.begin(channels, frequency)) {
     Serial.println("Failed to start PDM!");
-    while (1);
+    while (1)
+      ;
   }
   // Optionally set the gain, defaults to 20
   PDM.setGain(80);
@@ -41,7 +42,7 @@ void loop() {
   // Check if there are samples in the transmit buffer
   if (transmitBufferIndex > 0) {
     // Send the transmit buffer over the serial connection
-    Serial.write((byte*)transmitBuffer, transmitBufferIndex * sizeof(short));
+    Serial.write((byte *)transmitBuffer, transmitBufferIndex * sizeof(short));
 
     // Clear the transmit buffer index
     transmitBufferIndex = 0;
@@ -51,7 +52,8 @@ void loop() {
 /**
  * Callback function to process the data from the PDM microphone.
  * NOTE: This callback is executed as part of an ISR.
- * Therefore using `Serial` to print messages inside this function isn't supported.
+ * Therefore using `Serial` to print messages inside this function isn't
+ * supported.
  */
 void onPDMdata() {
   // Query the number of available bytes
@@ -70,7 +72,7 @@ void onPDMdata() {
     // Check if the transmit buffer is full
     if (transmitBufferIndex == sizeof(transmitBuffer) / sizeof(short)) {
       // Send the transmit buffer over the serial connection
-      Serial.write((byte*)transmitBuffer, sizeof(transmitBuffer));
+      Serial.write((byte *)transmitBuffer, sizeof(transmitBuffer));
 
       // Clear the transmit buffer index
       transmitBufferIndex = 0;

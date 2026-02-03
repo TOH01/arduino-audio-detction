@@ -65,8 +65,8 @@ class Recorder:
                 key = get_key()
                 if key == ' ' and not self.recording:
                     self.count += 1
-                    print(f"Recording {self.count}...")
-                    # prevent keystroke noise from appearing in audio file
+                    print(f"Recording {self.count}")
+                    # prevent keystroke noise of spacebar from appearing in audio file
                     time.sleep(0.15)
                     self.ser.reset_input_buffer()
                     self.buffer = []
@@ -77,11 +77,10 @@ class Recorder:
         except KeyboardInterrupt:
             pass
         self.ser.close()
-        print(f"Done. Recorded {self.count} samples.")
+        print(f"Done, recorded {self.count} samples")
 
 
 if __name__ == "__main__":
-    print("Ports:", [p.device for p in serial.tools.list_ports.comports()])
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--port', required=True)
     parser.add_argument('-d', '--directory', default="recordings")

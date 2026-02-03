@@ -8,7 +8,7 @@ import librosa
 from data_processing import extract_features
 
 
-def load_validation_samples(folder_path: str) -> list:
+def load_validation_samples(folder_path):
     samples = []
     if not os.path.exists(folder_path):
         print(f"Warning: Folder not found: {folder_path}")
@@ -141,7 +141,7 @@ def main():
             })
 
         acc = correct / total if total > 0 else 0
-        print(f"  Accuracy: {acc:.2%} ({correct}/{total})")
+        print(f"Accuracy: {acc:.2%} ({correct}/{total})")
         total_correct += correct
         total_samples += total
 

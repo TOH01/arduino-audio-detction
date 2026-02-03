@@ -1,8 +1,9 @@
-import tensorflow as tf
 from tensorflow.keras import layers, models
 
+# model architecture is inspired from: https://www.tensorflow.org/tutorials/audio/simple_audio,
+# but heavily compacted to run on embedded devices
 
-def build_model(input_shape, num_classes: int) -> tf.keras.Model:
+def build_model(input_shape, num_classes):
     model = models.Sequential([
         # Input Layer
         layers.Input(shape=input_shape),
