@@ -156,9 +156,7 @@ void loop() {
   #ifdef INJECT_TEST_AUDIO
     int remaining;
     int toCopy;
-  #endif
 
-  #ifdef INJECT_TEST_AUDIO
     if (Deploy_SamplesRead == 0) {
       if (Deploy_InjectIdx >= test_audio_len){
         Deploy_InjectIdx = 0;
