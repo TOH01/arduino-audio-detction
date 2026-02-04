@@ -2,4 +2,3 @@ src/data_gather/libraries
 venv
 __pycache__/
 libraries
-.vscode/

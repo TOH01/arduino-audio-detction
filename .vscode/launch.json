@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Train Audio Model",
+            "type": "python",
+            "request": "launch",
+            "module": "main",
+            "args": [
+                "--config",
+                "config.json"
+            ],
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "cwd": "${workspaceFolder}/nano_33_ble",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/nano_33_ble/src"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Validate Audio Model",
+            "type": "python",
+            "request": "launch",
+            "module": "validate_model",
+            "args": [
+                "--config",
+                "config.json"
+            ],
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "cwd": "${workspaceFolder}/nano_33_ble",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/nano_33_ble/src"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

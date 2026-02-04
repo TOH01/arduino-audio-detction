@@ -7,6 +7,9 @@ TinyML audio keyword detection for Arduino Nano 33 BLE Sense Rev 2.
 ```
 1. Record Data  →  2. Train Model  →  3. Validate  →  4. Deploy
 ```
+## Prerequisites
+
+It is recommenedend, to use this repo inside of VSCode, to leverage the created `launch.json` configs. It is expected, that a venv is created in repo root, with all required packages.
 
 ## 1. Recording Data
 
@@ -30,6 +33,12 @@ cd nano_33_ble
 python src/main.py --config config.json
 ```
 
+Or in VSCode
+
+```bash
+Run and Debug -> Train Audio Model -> F5
+```
+
 If needed, modify the provided json config. It is possible to change all training parameters without editing the code.
 
 Output files are saved to specified output_dir in config:
@@ -44,12 +53,18 @@ cd nano_33_ble
 python src/validate_model.py config.json
 ```
 
+Or in VSCode
+
+```bash
+Run and Debug -> Validate Audio Model -> F5
+```
+
 Results will be saved in specified output dir. For validation to work properly `validation_data_path` needs to be set for each motion in the config.
 Validation path should include new data, which the model will be validated against.
 
 ## 4. Deployment
 
-Copy the required header files from Step 2 into the same location as deploy.ino.
+If `output_dir` inside of the .json config is unchanged, simply flash `nano_33_ble/deploy/deploy.ino` on the BLE 33 Nano, using the Arduino IDE. All required files will already be generated and ready to compile.
 
 ## 5. Notes
 

@@ -29,7 +29,7 @@ def build_model(input_shape, num_classes):
     return model
 
 
-def train_model(X_train, y_train, X_test, y_test, epochs=15, batch_size=32):
+def train_model(X_train, y_train, X_test, y_test, epochs, batch_size):
     input_shape = X_train.shape[1:] 
     num_classes = len(set(y_train))
 

@@ -26,7 +26,7 @@ def create_full_model_from_config(config):
     X, y = load_dataset_from_config(sample_rate, int(sample_rate * duration), n_mfcc, n_fft, hop_length, motions)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = train_model(X_train, y_train, X_test, y_test, epochs=epochs, batch_size=batch_size)
+    model = train_model(X_train, y_train, X_test, y_test, epochs, batch_size)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
