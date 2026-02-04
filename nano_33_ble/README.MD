@@ -36,7 +36,7 @@ python src/main.py --config config.json
 Or in VSCode
 
 ```bash
-Run and Debug -> Train Audio Model -> F5
+Run and Debug → Train Audio Model → F5
 ```
 
 If needed, modify the provided json config. It is possible to change all training parameters without editing the code.
@@ -56,7 +56,7 @@ python src/validate_model.py config.json
 Or in VSCode
 
 ```bash
-Run and Debug -> Validate Audio Model -> F5
+Run and Debug → Validate Audio Model → F5
 ```
 
 Results will be saved in specified output dir. For validation to work properly `validation_data_path` needs to be set for each motion in the config.
