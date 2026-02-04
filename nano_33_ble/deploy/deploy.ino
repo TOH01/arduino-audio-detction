@@ -1,9 +1,11 @@
+/* Includes */
 #include <PDM.h>
 #include <TensorFlowLite.h>
 #include <arduinoFFT.h>
 #include <tensorflow/lite/micro/all_ops_resolver.h>
 #include <tensorflow/lite/micro/micro_interpreter.h>
 #include <tensorflow/lite/schema/schema_generated.h>
+#include <limits.h>
 
 #include "dsp_params.h"
 #include "mel_filterbank.h"
@@ -13,278 +15,247 @@
 #include "audio_inject.h"
 #endif
 
-// Value from recorder.py (GAIN = 1.5)
-#define GAIN_FACTOR 1.5f
+/* Defines */
+#define GAIN_FACTOR 1.5f  // Value from recorder.py (GAIN = 1.5)
+#define PDM_GAIN 80       // Must match value from recorder.ino
+#define TENSOR_ARENA_SIZE 60 * 1024
+#define AUDIO_BLOCK_SIZE 512
 
 #ifdef INJECT_TEST_AUDIO
-size_t inject_idx = 0;
+#define INJECT_TEST_AUDIO_DELAY 32
 #endif
 
-short sampleBuffer[512];
-volatile int samplesRead = 0;
+/* Globals */
+#ifdef INJECT_TEST_AUDIO
+size_t Deploy_InjectIdx = 0;
+#endif
 
-float audioWindow[N_FFT];
-float vReal[N_FFT];
-float vImag[N_FFT];
-int samplesSinceInference = 0;
+short Deploy_SampleBuffer[AUDIO_BLOCK_SIZE];
+volatile int Deploy_SamplesRead = 0;
 
-int8_t spectrogram[EXPECTED_FRAMES][N_MFCC_COEFFS];
+float Deploy_AudioWindow[N_FFT];
+float Deploy_vReal[N_FFT];
+float Deploy_vImag[N_FFT];
+int Deploy_SamplesSinceInference = 0;
 
-ArduinoFFT<float> FFT = ArduinoFFT<float>(vReal, vImag, N_FFT, SAMPLE_RATE);
+int8_t Deploy_Spectogram[EXPECTED_FRAMES][N_MFCC_COEFFS];
 
-tflite::AllOpsResolver tflOpsResolver;
-const tflite::Model *tflModel = nullptr;
-tflite::MicroInterpreter *tflInterpreter = nullptr;
-TfLiteTensor *tflInputTensor = nullptr;
-TfLiteTensor *tflOutputTensor = nullptr;
+ArduinoFFT<float> Deploy_FFT = ArduinoFFT<float>(Deploy_vReal, Deploy_vImag, N_FFT, SAMPLE_RATE);
 
-constexpr int kTensorArenaSize = 60 * 1024;
-uint8_t tensorArena[kTensorArenaSize];
+tflite::AllOpsResolver Deploy_TflOpsResolve;
+const tflite::Model *Deploy_TflModel = nullptr;
+tflite::MicroInterpreter *Deploy_TflInterpreter = nullptr;
+TfLiteTensor *Deploy_TflInputTensor = nullptr;
+TfLiteTensor *Deploy_TflOutputTensor = nullptr;
 
-void onPDMdata() {
+uint8_t Deploy_TensorArena[TENSOR_ARENA_SIZE];
+
+void onPDMdata(void) {
   int bytesAvailable = PDM.available();
-  PDM.read(sampleBuffer, bytesAvailable);
-
-  // Update count (16-bit samples = bytes / 2)
-  samplesRead = bytesAvailable / 2;
+  PDM.read(Deploy_SampleBuffer, bytesAvailable);
+  Deploy_SamplesRead = bytesAvailable / 2;
 }
 
 void compute_features(float *input_audio, int8_t *output_features) {
-  // 1. Copy to FFT buffers
+  float melEnergies[N_MEL_FILTERS];
+  float scale = Deploy_TflInputTensor->params.scale;
+  int zeroPoint = Deploy_TflInputTensor->params.zero_point;
+  float mfcc[N_MFCC_COEFFS];
+  
   for (int i = 0; i < N_FFT; i++) {
-    vReal[i] = input_audio[i];
-    vImag[i] = 0.0f;
+    Deploy_vReal[i] = input_audio[i];
+    Deploy_vImag[i] = 0.0f;
   }
 
-  // 2. FFT with Hamming window
-  FFT.windowing(FFTWindow::Hamming, FFTDirection::Forward);
-  FFT.compute(FFTDirection::Forward);
-  FFT.complexToMagnitude();
+  Deploy_FFT.windowing(FFTWindow::Hamming, FFTDirection::Forward);
+  Deploy_FFT.compute(FFTDirection::Forward);
+  Deploy_FFT.complexToMagnitude();
 
   // librosa uses magnitude^2
   // https://librosa.org/doc/latest/generated/librosa.power_to_db.html
   for (int i = 0; i < N_FFT_BINS; i++) {
-    vReal[i] = vReal[i] * vReal[i];
+    Deploy_vReal[i] = Deploy_vReal[i] * Deploy_vReal[i];
   }
-
-  // 3. Apply Mel Filterbank
-  float mel_energies[N_MEL_FILTERS];
-
   for (int m = 0; m < N_MEL_FILTERS; m++) {
     float sum = 0.0f;
     for (int k = 0; k < N_FFT_BINS; k++) {
-      sum += vReal[k] * mel_filterbank[m][k];
+      sum += Deploy_vReal[k] * mel_filterbank[m][k];
     }
-
     // Librosa uses 10 * log10(x) = 10 * ln(x) / ln(10)
     // Scaling factor 10 / ln(10) ~= 4.3429
     // https://librosa.org/doc/latest/generated/librosa.power_to_db.html
-    mel_energies[m] = 4.342944819f * logf(sum + 1e-6f);
+    melEnergies[m] = 4.342944819f * logf(sum + 1e-6f);
   }
-
-  // 4. DCT-II to get MFCCs
-  float mfcc[N_MFCC_COEFFS];
-
   for (int k = 0; k < N_MFCC_COEFFS; k++) {
     float sum = 0.0f;
     for (int m = 0; m < N_MEL_FILTERS; m++) {
-      sum += dct_matrix[k][m] * mel_energies[m];
+      sum += dct_matrix[k][m] * melEnergies[m];
     }
     mfcc[k] = sum;
   }
-
-  // 5. Quantize to int8 for TFLite
-  float scale = tflInputTensor->params.scale;
-  int zero_point = tflInputTensor->params.zero_point;
-
   for (int i = 0; i < N_MFCC_COEFFS; i++) {
-    int32_t val = (int32_t)(mfcc[i] / scale) + zero_point;
-    if (val > 127)
-      val = 127;
-    if (val < -128)
-      val = -128;
+    int32_t val = (int32_t)(mfcc[i] / scale) + zeroPoint;
+    if (val > INT8_MAX)
+      val = INT8_MAX;
+    if (val < INT8_MIN)
+      val = INT8_MIN;
     output_features[i] = (int8_t)val;
+  }
+}
+
+void CriticalError_Handler(void){
+  while(1){
+    // do nothing
   }
 }
 
 void setup() {
   Serial.begin(115200);
 
-  long start = millis();
-  while (!Serial && (millis() - start < 3000))
-    ;
+  while (!Serial) {
+    // do nothing
+  };
 
-  Serial.println("--- Start Init Audio Classifier ---");
+  Deploy_TflModel = tflite::GetModel(audio_model);
 
-  pinMode(LEDR, OUTPUT);
-  pinMode(LEDG, OUTPUT);
-  pinMode(LEDB, OUTPUT);
-
-  tflModel = tflite::GetModel(audio_model);
-  if (tflModel->version() != TFLITE_SCHEMA_VERSION) {
+  if (Deploy_TflModel->version() != TFLITE_SCHEMA_VERSION) {
     Serial.println("Error: Model schema mismatch!");
-    while (1) {
-      digitalWrite(LEDR, !digitalRead(LEDR));
-      delay(100);
-    }
+    CriticalError_Handler();
   }
 
-  tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver,
-                                                tensorArena, kTensorArenaSize);
+  Deploy_TflInterpreter = new tflite::MicroInterpreter(Deploy_TflModel, Deploy_TflOpsResolve, Deploy_TensorArena, TENSOR_ARENA_SIZE);
 
-  if (tflInterpreter->AllocateTensors() != kTfLiteOk) {
+  if (Deploy_TflInterpreter->AllocateTensors() != kTfLiteOk) {
     Serial.println("Error: AllocateTensors failed!");
-    while (1) {
-      digitalWrite(LEDR, LOW);
-      delay(500);
+    CriticalError_Handler();
+  }
+
+  Deploy_TflInputTensor = Deploy_TflInterpreter->input(0);
+  Deploy_TflOutputTensor = Deploy_TflInterpreter->output(0);
+
+  memset(Deploy_Spectogram, Deploy_TflInputTensor->params.zero_point, sizeof(Deploy_Spectogram));
+
+  #ifndef INJECT_TEST_AUDIO
+    PDM.onReceive(onPDMdata);
+    if (!PDM.begin(1, SAMPLE_RATE)) {
+      CriticalError_Handler();
     }
-  }
 
-  tflInputTensor = tflInterpreter->input(0);
-  tflOutputTensor = tflInterpreter->output(0);
-
-  memset(spectrogram, tflInputTensor->params.zero_point, sizeof(spectrogram));
-#ifndef INJECT_TEST_AUDIO
-  PDM.onReceive(onPDMdata);
-  if (!PDM.begin(1, SAMPLE_RATE)) {
-    Serial.println("Error: PDM Start Failed!");
-    while (1)
-      ;
-  }
-
-  // Must match value from recorder.ino
-  PDM.setGain(80);
-#endif
-
-  Serial.println("--- Init Complete ---");
+    PDM.setGain(PDM_GAIN);
+  #endif
 }
 
 void loop() {
   int localSamplesRead = 0;
-  short localBuffer[512];
+  short localBuffer[AUDIO_BLOCK_SIZE];
+  int8_t mfccCol[N_MFCC_COEFFS];
+  float maxConf;
+  int maxIdx;
+  float prob;
 
-#ifdef INJECT_TEST_AUDIO
-  if (samplesRead == 0) {
-    if (inject_idx >= test_audio_len)
-      inject_idx = 0;
-    int chunk = 512;
-    int remaining = test_audio_len - inject_idx;
-    int to_copy = (remaining < chunk) ? remaining : chunk;
-    memcpy(sampleBuffer, &test_audio_data[inject_idx], to_copy * sizeof(short));
-    inject_idx += to_copy;
-    if (to_copy < chunk) {
-      memcpy(&sampleBuffer[to_copy], &test_audio_data[0],
-             (chunk - to_copy) * sizeof(short));
-      inject_idx = chunk - to_copy;
+  #ifdef INJECT_TEST_AUDIO
+    int remaining;
+    int toCopy;
+  #endif
+
+  #ifdef INJECT_TEST_AUDIO
+    if (Deploy_SamplesRead == 0) {
+      if (Deploy_InjectIdx >= test_audio_len){
+        Deploy_InjectIdx = 0;
+      }
+        
+      remaining = test_audio_len - Deploy_InjectIdx;
+      if (remaining < AUDIO_BLOCK_SIZE){
+        toCopy = remaining;
+      }
+      else{
+        toCopy = AUDIO_BLOCK_SIZE;
+      }
+
+      memcpy(Deploy_SampleBuffer, &test_audio_data[Deploy_InjectIdx], toCopy * sizeof(short));
+      Deploy_InjectIdx += toCopy;
+
+      if (toCopy < AUDIO_BLOCK_SIZE) {
+        memcpy(&Deploy_SampleBuffer[toCopy], &test_audio_data[0], (AUDIO_BLOCK_SIZE - toCopy) * sizeof(short));
+        Deploy_InjectIdx = AUDIO_BLOCK_SIZE - toCopy;
+      }
+      Deploy_SamplesRead = AUDIO_BLOCK_SIZE;
+      delay(INJECT_TEST_AUDIO_DELAY);
     }
-    samplesRead = chunk;
-    delay(32);
-  }
-#endif
+  #endif
 
-  if (samplesRead > 0) {
+  if (Deploy_SamplesRead > 0) {
     noInterrupts();
-    localSamplesRead = samplesRead;
+    localSamplesRead = Deploy_SamplesRead;
     for (int i = 0; i < localSamplesRead; i++) {
-      localBuffer[i] = sampleBuffer[i];
+      localBuffer[i] = Deploy_SampleBuffer[i];
     }
-    samplesRead = 0;
+    Deploy_SamplesRead = 0;
     interrupts();
   }
 
-  // 2. Process Audio if we got any
   if (localSamplesRead > 0) {
 
-    // Slide the Audio Window
-    memmove(audioWindow, &audioWindow[localSamplesRead],
-            (N_FFT - localSamplesRead) * sizeof(float));
+    memmove(Deploy_AudioWindow, &Deploy_AudioWindow[localSamplesRead], (N_FFT - localSamplesRead) * sizeof(float));
 
-    // Add new data
     for (int i = 0; i < localSamplesRead; i++) {
-      // Apply Gain & Normalize
       float sample = (float)localBuffer[i] * GAIN_FACTOR;
-      if (sample > 32767.0f)
-        sample = 32767.0f;
-      if (sample < -32768.0f)
-        sample = -32768.0f;
-
-      int idx = (N_FFT - localSamplesRead) + i;
-      audioWindow[idx] = sample / 32768.0f;
-    } // Accumulate how much new data we have processed
-    samplesSinceInference += localSamplesRead;
-
-    // 3. Check if we have enough new data to run a HOP
-    if (samplesSinceInference >= HOP_LENGTH) {
-
-      // DEBUG: Simple VU Meter to make sure we are getting signal
-      float max_amp = 0.0f;
-      for (int i = 0; i < N_FFT; i++) {
-        if (fabs(audioWindow[i]) > max_amp)
-          max_amp = fabs(audioWindow[i]);
+      if (sample > SHRT_MAX){
+        sample = SHRT_MAX;
       }
-      Serial.print("Vol:");
-      Serial.print(max_amp, 2);
-      Serial.print(" [");
-      int bars = (int)(max_amp * 20.0f); // Scale to ~20 chars
-      for (int i = 0; i < bars; i++)
-        Serial.print("#");
-      for (int i = bars; i < 20; i++)
-        Serial.print(" ");
-      Serial.print("]  ");
+      else if(sample < SHRT_MIN){
+        sample = SHRT_MIN;
+      } 
 
-      // Blink Green briefly
-      digitalWrite(LEDG, LOW);
+      Deploy_AudioWindow[(N_FFT - localSamplesRead) + i] = sample / (float)(SHRT_MAX + 1);
+    }
+    
+    Deploy_SamplesSinceInference += localSamplesRead;
 
-      // A. Extract Features
-      int8_t mfcc_col[N_MFCC_COEFFS];
-      compute_features(audioWindow, mfcc_col);
+    if (Deploy_SamplesSinceInference >= HOP_LENGTH) {
+      compute_features(Deploy_AudioWindow, mfccCol);
 
-      int time_steps = EXPECTED_FRAMES;
-
-      for (int t = 0; t < time_steps - 1; t++) {
+      for (int t = 0; t < EXPECTED_FRAMES - 1; t++) {
         for (int c = 0; c < N_MFCC_COEFFS; c++) {
-          spectrogram[t][c] = spectrogram[t + 1][c];
+          Deploy_Spectogram[t][c] = Deploy_Spectogram[t + 1][c];
         }
       }
 
       for (int c = 0; c < N_MFCC_COEFFS; c++) {
-        spectrogram[time_steps - 1][c] = mfcc_col[c];
+        Deploy_Spectogram[EXPECTED_FRAMES - 1][c] = mfccCol[c];
       }
 
-      int8_t *input_data = tflInputTensor->data.int8;
-      memcpy(input_data, spectrogram, sizeof(spectrogram));
+      memcpy(Deploy_TflInputTensor->data.int8, Deploy_Spectogram, sizeof(Deploy_Spectogram));
 
-      TfLiteStatus invoke_status = tflInterpreter->Invoke();
+      TfLiteStatus invoke_status = Deploy_TflInterpreter->Invoke();
       if (invoke_status == kTfLiteOk) {
-        float scale = tflOutputTensor->params.scale;
-        int zero = tflOutputTensor->params.zero_point;
+        maxConf = 0.0;
+        maxIdx = -1;
 
-        Serial.print("Probs: ");
-        float max_conf = 0.0;
-        int max_idx = -1;
+        Serial.print("Probabilites: ");
 
         for (int i = 0; i < NUM_CLASSES; i++) {
-          float prob = (tflOutputTensor->data.int8[i] - zero) * scale;
+          prob = (Deploy_TflOutputTensor->data.int8[i] - Deploy_TflOutputTensor->params.zero_point) * Deploy_TflOutputTensor->params.scale;
           Serial.print(class_labels[i]);
           Serial.print(":");
           Serial.print(prob, 2);
           Serial.print("  ");
 
-          if (prob > max_conf) {
-            max_conf = prob;
-            max_idx = i;
+          if (prob > maxConf) {
+            maxConf = prob;
+            maxIdx = i;
           }
         }
 
-        if (max_conf > CONFIDENCE_THRESHOLD && max_idx > 0) {
+        if (maxConf > CONFIDENCE_THRESHOLD && maxIdx > 0) {
           Serial.print("  >>> DETECTED: ");
-          Serial.print(class_labels[max_idx]);
+          Serial.print(class_labels[maxIdx]);
         }
+        
         Serial.println();
       }
 
-      samplesSinceInference -= HOP_LENGTH;
-      digitalWrite(LEDG, HIGH); // LED Off
+      Deploy_SamplesSinceInference -= HOP_LENGTH;
     }
   }
 }

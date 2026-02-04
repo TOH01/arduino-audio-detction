@@ -11,7 +11,6 @@ from data_processing import extract_features
 def load_validation_samples(folder_path):
     samples = []
     if not os.path.exists(folder_path):
-        print(f"Warning: Folder not found: {folder_path}")
         return samples
 
     for file in sorted(os.listdir(folder_path)):
@@ -57,17 +56,9 @@ def main(config):
         label = motion['label']
         val_path = motion.get('validation_data_path')
 
-        if val_path is None:
-            print(f"Skipping motion '{name}': no validation_data_path")
-            continue
-
         folder_path = os.path.join(os.getcwd(), val_path)
 
         wav_files = load_validation_samples(folder_path)
-
-        if not wav_files:
-            print(f"No .wav files for {name} found!")
-            continue
 
         correct = 0
         total = 0
@@ -82,9 +73,6 @@ def main(config):
                 audio = audio[:expected_samples]
                     
             mfcc = extract_features(audio, sample_rate, n_mfcc, n_fft, hop_length)
-
-            if mfcc is None:
-                continue
 
             input_data = mfcc[np.newaxis, ..., np.newaxis]
 
@@ -102,6 +90,7 @@ def main(config):
 
             if is_correct:
                 correct += 1
+            
             total += 1
 
             results.append({

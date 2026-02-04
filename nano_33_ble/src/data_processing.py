@@ -37,43 +37,33 @@ def load_dataset_from_config(sample_rate, expected_samples, n_mfcc, n_fft, hop_l
         data_count = 0
         folder_path = os.path.join(os.getcwd(), motion["data_path"])
 
-        if not os.path.exists(folder_path):
-            print(f"Skipping missing folder: {folder_path}")
-            continue
-
         files = [f for f in os.listdir(folder_path) if f.endswith('.wav')]
         print(f"Loading {name}: {len(files)} files found")
 
         for file in files:
             file_path = os.path.join(folder_path, file)
-            try:
-                raw_audio, _ = librosa.load(file_path, sr=sample_rate)
 
-                # Creates 5 different versions of each audio file
-                # left, right, center and 2 random padding
-                variations = []
-                variations.append(get_padded(raw_audio, expected_samples, 'left'))
-                variations.append(get_padded(raw_audio, expected_samples, 'right')) 
-                variations.append(get_padded(raw_audio, expected_samples, 'center'))
+            raw_audio, _ = librosa.load(file_path, sr=sample_rate)
 
-                for _ in range(2):
-                    v = get_padded(raw_audio, expected_samples, 'random')
-                    # Add Noise
-                    noise_amp = 0.005 * np.random.uniform() * np.amax(v)
-                    v = v + noise_amp * np.random.normal(size=v.shape)
-                    variations.append(v)
+            # creates 5 different versions of each audio file
+            # left, right, center and 2 random padding
+            variations = []
+            variations.append(get_padded(raw_audio, expected_samples, 'left'))
+            variations.append(get_padded(raw_audio, expected_samples, 'right')) 
+            variations.append(get_padded(raw_audio, expected_samples, 'center'))
 
-                
-                # Process all variations
-                for v in variations:
-                    feat = extract_features(v, sample_rate, n_mfcc, n_fft, hop_length)
-                    if feat is not None:
-                        X.append(feat)
-                        y.append(label)
-                        data_count += 1
+            for _ in range(2):
+                v = get_padded(raw_audio, expected_samples, 'random')
+                noise_amp = 0.005 * np.random.uniform() * np.amax(v)
+                v = v + noise_amp * np.random.normal(size=v.shape)
+                variations.append(v)
 
-            except Exception as e:
-                print(f"Error processing {file}: {e}")
+            for v in variations:
+                feat = extract_features(v, sample_rate, n_mfcc, n_fft, hop_length)
+                if feat is not None:
+                    X.append(feat)
+                    y.append(label)
+                    data_count += 1
 
         print(f"Generated {data_count} samples for motion '{name}'")
 
