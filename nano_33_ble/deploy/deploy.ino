@@ -153,6 +153,8 @@ void loop() {
   int maxIdx;
   float prob;
 
+  __WFI();
+
   #ifdef INJECT_TEST_AUDIO
     int remaining;
     int toCopy;
