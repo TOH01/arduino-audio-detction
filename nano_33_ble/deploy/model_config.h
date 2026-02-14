@@ -7,8 +7,6 @@
 #define NUM_CLASSES 3
 #define MODEL_NAME "audio_model"
 
-#define INJECT_TEST_AUDIO
-
 static const char* class_labels[NUM_CLASSES] = {
   "noise",
   "open",

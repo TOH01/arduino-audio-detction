@@ -8,23 +8,13 @@ def extract_features(audio, sample_rate, n_mfcc, n_fft, hop_length):
     return mfcc.T
 
 
-def get_padded(audio, expected_samples, mode='left'):
+def get_padded(audio, expected_samples):
     if len(audio) >= expected_samples:
         return audio[:expected_samples]
 
     pad_len = expected_samples - len(audio)
 
-    if mode == 'left':
-        return np.pad(audio, (0, pad_len))
-    elif mode == 'right':
-        return np.pad(audio, (pad_len, 0))
-    elif mode == 'center':
-        half = pad_len // 2
-        return np.pad(audio, (half, pad_len - half))
-    elif mode == 'random':
-        start = np.random.randint(0, pad_len + 1)
-        return np.pad(audio, (start, pad_len - start))
-    return audio
+    return np.pad(audio, (0, pad_len))
 
 
 def load_dataset_from_config(sample_rate, expected_samples, n_mfcc, n_fft, hop_length, motions):
@@ -45,18 +35,20 @@ def load_dataset_from_config(sample_rate, expected_samples, n_mfcc, n_fft, hop_l
 
             raw_audio, _ = librosa.load(file_path, sr=sample_rate)
 
-            # creates 5 different versions of each audio file
-            # left, right, center and 2 random padding
-            variations = []
-            variations.append(get_padded(raw_audio, expected_samples, 'left'))
-            variations.append(get_padded(raw_audio, expected_samples, 'right')) 
-            variations.append(get_padded(raw_audio, expected_samples, 'center'))
+            # Original audio (center padded)
+            variations = [get_padded(raw_audio, expected_samples)]
 
-            for _ in range(2):
-                v = get_padded(raw_audio, expected_samples, 'random')
-                noise_amp = 0.005 * np.random.uniform() * np.amax(v)
-                v = v + noise_amp * np.random.normal(size=v.shape)
-                variations.append(v)
+            # Time Stretching (https://arxiv.org/pdf/1608.04363)
+            time_stretch_factors = [0.81, 0.93, 1.07, 1.23]
+            for rate in time_stretch_factors:
+                y_stretched = librosa.effects.time_stretch(raw_audio, rate=rate)
+                variations.append(get_padded(y_stretched, expected_samples))
+
+            # Pitch Shifting (https://arxiv.org/pdf/1608.04363)
+            pitch_shift_semitones = [-2, -1, 1, 2]
+            for steps in pitch_shift_semitones:
+                y_shifted = librosa.effects.pitch_shift(raw_audio, sr=sample_rate, n_steps=steps)
+                variations.append(get_padded(y_shifted, expected_samples))
 
             for v in variations:
                 feat = extract_features(v, sample_rate, n_mfcc, n_fft, hop_length)
