@@ -157,7 +157,7 @@ close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9883;True
 close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9844;True
 close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9648;True
 Standard Settings, minimal sample: "n_fft": 2048, "n_mfcc": 13, "hop_length": 512, SampleRate 4000 Hz
-0.00650A, 0.03151W; No false positives, but low amount of detections
+0.00650A, 0.03151W; Good detection capability
 file;motion;expected_label;predicted_label;confidence;correct
 noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
 noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
