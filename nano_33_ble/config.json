@@ -6,8 +6,9 @@
     "batch_size": 16,
     "output_dir": "./deploy",
     "n_fft": 2048,
-    "n_mfcc": 13,
+    "n_mfcc": 20,
     "hop_length": 512,
+    "inject_test_path": "recorder/recordings/close_val/close.2026-02-03_18-48-34-185716.wav",
     "confidence": 0.6,
     "motions": [
         {

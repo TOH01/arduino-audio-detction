@@ -2,18 +2,137 @@ Baseline
 0.00400A, 0.02025W
 Standard Settings: "n_fft": 2048, "n_mfcc": 13, "hop_length": 512
 0.00700A, 0.03593W; Very strong detection capability
+Validation: Overall Accuracy: 100.00% (15/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.6836;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.7461;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.7461;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.7461;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.7461;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.7461;True
 
 High Hop: "n_fft": 2048, "n_mfcc": 13, "hop_length": 2048
 0.00550A, 0.02784W; No Detection possible
+Validation: Overall Accuracy: 100.00% (15/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.5781;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
 Low Hop: "n_fft": 2048, "n_mfcc": 13, "hop_length": 256
 0.00725A, 0.03670W; Alot of false positive detections
+Validation: Overall Accuracy: 100.00% (15/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.9727;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
 
 Low FFT: "n_fft": 512, "n_mfcc": 13, "hop_length": 512
 0.00625A, 0.03291W; Decent Detection with low amount of false positives
+Validation: Overall Accuracy: 93.33% (14/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;0;0.6953;False
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
 Mid FFT: "n_fft": 1024, "n_mfcc": 13, "hop_length": 512
 0.00650A, 0.03151W; Decent Detection with low amount of false positives
+Validation: Accuracy: unknown
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;0;0.6953;False
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
 
 Low MFCC: "n_fft": 2048, "n_mfcc": 6, "hop_length": 512
 0.00672A-0.00700A, 0.03405W-0.03593W (unstable); Decent Detection with low amount of false positives
+Validation: Overall Accuracy: 93.33% (14/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;0;0.9297;False
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
 High MFCC: "n_fft": 2048, "n_mfcc": 20, "hop_length": 512
 0.00700A, 0.03593W;  Decent Detection with low amount of false positives
+Validation: Overall Accuracy: 100.00% (15/15)
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
