@@ -136,3 +136,42 @@ close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
 close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
 close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
 close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
+
+
+Standard Settings, low sample: "n_fft": 2048, "n_mfcc": 13, "hop_length": 512, SampleRate 8000 Hz
+0.00650A, 0.03151W; Decent Detection with low amount of false positives
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.9414;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9922;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9883;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9844;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9648;True
+Standard Settings, minimal sample: "n_fft": 2048, "n_mfcc": 13, "hop_length": 512, SampleRate 4000 Hz
+0.00650A, 0.03151W; No false positives, but low amount of detections
+file;motion;expected_label;predicted_label;confidence;correct
+noise.2026-02-03_21-19-52-545018.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-54-464813.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-57-408836.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-19-59-968741.wav;noise;0;0;0.9961;True
+noise.2026-02-03_21-20-02-016433.wav;noise;0;0;0.9961;True
+open.2026-02-03_18-48-53-688929.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-55-352575.wav;open;1;1;0.9961;True
+open.2026-02-03_18-48-57-145571.wav;open;1;1;0.9453;True
+open.2026-02-03_18-48-58-553943.wav;open;1;1;0.9961;True
+open.2026-02-03_18-49-00-089386.wav;open;1;1;0.9961;True
+close.2026-02-03_18-48-34-185716.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-35-720951.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-37-257011.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-38-665256.wav;close;2;2;0.9961;True
+close.2026-02-03_18-48-40-072737.wav;close;2;2;0.9961;True
+
